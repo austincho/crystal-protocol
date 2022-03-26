@@ -26,6 +26,12 @@ pub enum ContractError {
         requires: Vec<Coin>
     },
 
+    #[error("Collateral Price Mismatch")]
+    CollateralPriceMismatch {
+        offer: Vec<Coin>,
+        requires: Vec<Coin>
+    },
+
     #[error("Option Terms Does Not Match Created Option")]
     AgreementMismatch {},
 
