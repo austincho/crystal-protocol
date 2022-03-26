@@ -1,11 +1,10 @@
 use cosmwasm_std::{Addr, Coin};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::state::{ OptionStatus, State};
+use crate::state::{ State};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
-    pub option_status: OptionStatus,
     pub asset: Vec<Coin>,
     pub collateral: Vec<Coin>,
     pub premium: Vec<Coin>,

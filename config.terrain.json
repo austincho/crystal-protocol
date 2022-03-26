@@ -3,7 +3,7 @@
     "_base": {
       "store": {
         "fee": {
-          "gasLimit": 2000000,
+          "gasLimit": 2500000,
           "amount": {
             "uluna": 1000000
           }
@@ -11,13 +11,31 @@
       },
       "instantiation": {
         "fee": {
-          "gasLimit": 2000000,
+          "gasLimit": 200000,
           "amount": {
             "uluna": 1000000
           }
         },
         "instantiateMsg": {
-          "count": 0
+          "asset" : [
+            {
+              "denom" : "uluna",
+              "amount" : 1
+            }
+          ],
+          "collateral" : [
+            {
+              "denom" : "uusd",
+              "amount" : 10
+            }
+          ],
+          "premium" : [
+            {
+              "denom" : "uusd",
+              "amount" : 5
+            }
+          ],
+          "expires": 10000
         }
       }
     }
@@ -37,7 +55,7 @@
   "localterra": {
     "_connection": {
       "chainID": "localterra",
-      "URL": "http://localhost:3060"
+      "URL": "http://localhost:1317"
     }
   }
 }

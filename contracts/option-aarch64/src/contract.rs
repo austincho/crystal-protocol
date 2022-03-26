@@ -48,7 +48,6 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        // ExecuteMsg::CreateOption { create_request } => create_option(deps, env, info, create_request),
         ExecuteMsg::FundPremium {} => fund_premium(deps, env, info),
         ExecuteMsg::TransferOption { recipient } => transfer_option(deps, env, info, recipient),
         ExecuteMsg::UnderwriteOption { underwrite_option_req } => underwrite_option(deps, env, info, underwrite_option_req),
@@ -96,7 +95,7 @@ pub fn underwrite_option(
         return Err(ContractError::Unauthorized {});
     }
 
-    // ensure the option has not expired
+    // ensure the option-aarch64 has not expired
     if env.block.height < state.expires {
         return Err(ContractError::OptionExpired {
             expired: state.expires,
@@ -163,7 +162,7 @@ pub fn execute_option(
         return Err(ContractError::Unauthorized {});
     }
 
-    // ensure the option has not expired
+    // ensure the option-aarch64 has not expired
     if env.block.height < state.expires {
         return Err(ContractError::OptionExpired {
             expired: state.expires,
@@ -200,17 +199,21 @@ pub fn withdraw_expired_option(
 ) -> Result<Response, ContractError> {
     let state = STATE.load(deps.storage)?;
 
-    if env.block.height <= state.expires {
+    if env.block.height < state.expires {
         return Err(ContractError::Unauthorized {})
     }
 
-    //TODO: Tpdp
     Ok(Response::new()
         .add_message(
             BankMsg::Send {
                 to_address: state.holder.into_string(),
                 amount: state.collateral,
             })
+        .add_message(
+            BankMsg::Send {
+            to_address: state.underwriter.unwrap().into_string(),
+                amount: state.asset,
+        })
     )
 }
 
@@ -245,14 +248,12 @@ mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{Coin, coins, from_binary, Uint128};
-    use crate::state::{OptionStatus};
 
     #[test]
     fn pass_proper_initialization() {
         let mut deps = mock_dependencies(&[]);
         let info = mock_info("creator", &coins(10, "uluna"));
         let msg = InstantiateMsg {
-            option_status: OptionStatus::CREATED,
             asset: coins(10, "uusd"),
             collateral: coins(10, "uluna"),
             premium: coins(1, "uusd"),
@@ -281,7 +282,6 @@ mod tests {
 
         let info = mock_info("holder", &coins(10, "uluna"));
         let msg = InstantiateMsg {
-            option_status: OptionStatus::CREATED,
             asset: coins(10, "uusd"),
             collateral: coins(10, "uluna"),
             premium: coins(1, "uusd"),
@@ -289,7 +289,7 @@ mod tests {
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
 
-        // fund the premium for the option contract with the correct amount and denomination
+        // fund the premium for the option-aarch64 contract with the correct amount and denomination
         let info = mock_info("holder", &coins(1, "uusd"));
         let msg = ExecuteMsg::FundPremium {};
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -306,7 +306,6 @@ mod tests {
         let mut deps = mock_dependencies(&[]);
         let info = mock_info("holder", &coins(10, "uluna"));
         let msg = InstantiateMsg {
-            option_status: OptionStatus::CREATED,
             asset: coins(10, "uusd"),
             collateral: coins(10, "uluna"),
             premium: coins(1, "uusd"),
@@ -314,7 +313,7 @@ mod tests {
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
 
-        // fund the premium for the option contract with the wrong amount and denomination
+        // fund the premium for the option-aarch64 contract with the wrong amount and denomination
         let info = mock_info("holder", &coins(10, "token"));
         let msg = ExecuteMsg::FundPremium {};
         let res = execute(deps.as_mut(), mock_env(), info, msg);
@@ -331,7 +330,6 @@ mod tests {
 
         let info = mock_info("holder", &coins(10, "uluna"));
         let msg = InstantiateMsg {
-            option_status: OptionStatus::CREATED,
             asset: coins(10, "uusd"),
             collateral: coins(10, "uluna"),
             premium: coins(1, "uusd"),
@@ -339,12 +337,12 @@ mod tests {
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
 
-        // fund the premium for the option contract with the correct amount and denomination
+        // fund the premium for the option-aarch64 contract with the correct amount and denomination
         let info = mock_info("holder", &coins(1, "uusd"));
         let msg = ExecuteMsg::FundPremium {};
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        // underwrite the option contract
+        // underwrite the option-aarch64 contract
         let info = mock_info("underwriter", &coins(10, "uusd"));
         let underwrite_option_req = UnderwriteOptionRequest {
             asset: coins(10, "uusd"),
@@ -369,7 +367,6 @@ mod tests {
         let env = mock_env();
         let holder_info = mock_info("holder", &coins(10, "uluna"));
         let msg = InstantiateMsg {
-            option_status: OptionStatus::CREATED,
             asset: coins(10, "uusd"),
             collateral: coins(10, "uluna"),
             premium: coins(1, "uusd"),
@@ -377,12 +374,12 @@ mod tests {
         };
         instantiate(deps.as_mut(), env, holder_info, msg.clone()).unwrap();
 
-        // fund the premium for the option contract with the correct amount and denomination
+        // fund the premium for the option-aarch64 contract with the correct amount and denomination
         let holder_info = mock_info("holder", &coins(1, "uusd"));
         let msg = ExecuteMsg::FundPremium {};
-        execute(deps.as_mut(), env, holder_info, msg).unwrap();
+        execute(deps.as_mut(), env.clone(), holder_info, msg).unwrap();
 
-        // underwrite the option contract
+        // underwrite the option-aarch64 contract
         let underwriter_info = mock_info("underwriter", &coins(10, "uusd"));
         let underwrite_option_req = UnderwriteOptionRequest {
             asset: coins(10, "uusd"),
@@ -393,7 +390,7 @@ mod tests {
         let msg = ExecuteMsg::UnderwriteOption {
             underwrite_option_req,
         };
-        execute(deps.as_mut(), env, underwriter_info.clone(), msg);
+        execute(deps.as_mut(), env.clone(), underwriter_info.clone(), msg);
 
 
         // Check contract balance
@@ -408,7 +405,7 @@ mod tests {
             amount: Uint128::new(10 as u128)
         }, *balance_amount);
 
-        // execute the option contract
+        // execute the option-aarch64 contract
         let holder_info = mock_info("holder", &[]);
         let msg = ExecuteMsg::ExecuteOption {};
         execute(deps.as_mut(), env.clone(), holder_info.clone(), msg);
