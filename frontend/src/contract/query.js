@@ -1,10 +1,10 @@
 import { LCDClient } from '@terra-money/terra.js'
-import { contractAdress } from './address'
+import { contractAddress } from './address'
 
-export const getCount = async (wallet) => {
+export const getOptionContract = async (wallet) => {
   const lcd = new LCDClient({
     URL: wallet.network.lcd,
     chainID: wallet.network.chainID,
   })
-  return lcd.wasm.contractQuery(contractAdress(wallet), { get_count: {} })
+  return lcd.wasm.contractQuery(contractAddress(wallet), { get_option_contract: {} })
 }

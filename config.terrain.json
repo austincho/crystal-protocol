@@ -20,22 +20,22 @@
           "asset" : [
             {
               "denom" : "uluna",
-              "amount" : "1"
+              "amount" : "10000"
             }
           ],
           "collateral" : [
             {
               "denom" : "uusd",
-              "amount" : "10"
+              "amount" : "10000"
             }
           ],
           "premium" : [
             {
               "denom" : "uusd",
-              "amount" : "5"
+              "amount" : "50000"
             }
           ],
-          "expires": 10000
+          "expires": 1000000
         }
       }
     }

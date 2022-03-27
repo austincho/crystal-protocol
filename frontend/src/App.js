@@ -10,11 +10,15 @@ import {
 import * as execute from './contract/execute'
 import * as query from './contract/query'
 import { ConnectWallet } from './components/ConnectWallet'
+import {Coin, Coins, Fee} from "@terra-money/terra.js";
 
 function App() {
-  const [count, setCount] = useState(null)
-  const [updating, setUpdating] = useState(true)
-  const [resetValue, setResetValue] = useState(0)
+  const [option, setOption] = useState(null);
+  const [isHolder, setHolder] = useState(false);
+  const [isUnderwriter, setUnderwriter] = useState(false);
+  const [updating, setUpdating] = useState(true);
+
+  let optionStatus = "L";
 
   const { status } = useWallet()
 
@@ -23,48 +27,42 @@ function App() {
   useEffect(() => {
     const prefetch = async () => {
       if (connectedWallet) {
-        setCount((await query.getCount(connectedWallet)).count)
+        const result = await query.getOptionContract(connectedWallet);
+        setOption(result.state)
+        console.log(result.state)
       }
       setUpdating(false)
     }
     prefetch()
-  }, [connectedWallet])
+  }, [])
 
-  const onClickIncrement = async () => {
-    setUpdating(true)
-    await execute.increment(connectedWallet)
-    setCount((await query.getCount(connectedWallet)).count)
-    setUpdating(false)
-  }
 
-  const onClickReset = async () => {
-    setUpdating(true)
-    console.log(resetValue)
-    await execute.reset(connectedWallet, resetValue)
-    setCount((await query.getCount(connectedWallet)).count)
-    setUpdating(false)
+  const onClickFundCollateral = async() => {
+    setUpdating(true);
+    const coin = new Coin('uusd', 10);
+    let result = await execute.fund(connectedWallet, new Fee(200000, { uluna: 10000 }),{fund_collateral: {}}, new Coins([coin]) );
+    debugger;
   }
 
   return (
     <div className="App">
       <header className="App-header">
         <div style={{ display: 'inline' }}>
-          COUNT: {count} {updating ? '(updating . . .)' : ''}
-          <button onClick={onClickIncrement} type="button">
-            {' '}
-            +{' '}
-          </button>
+          {optionStatus}
         </div>
         {status === WalletStatus.WALLET_CONNECTED && (
           <div style={{ display: 'inline' }}>
-            <input
-              type="number"
-              onChange={(e) => setResetValue(+e.target.value)}
-              value={resetValue}
-            />
-            <button onClick={onClickReset} type="button">
-              {' '}
-              reset{' '}
+            <button onClick={onClickFundCollateral} type="button">
+              Fund Collateral
+            </button>
+            <button onClick={onClickFundCollateral} type="button">
+              Fund Premium
+            </button>
+            <button onClick={onClickFundCollateral} type="button">
+              Execute
+            </button>
+            <button onClick={onClickFundCollateral} type="button">
+              Withdraw
             </button>
           </div>
         )}

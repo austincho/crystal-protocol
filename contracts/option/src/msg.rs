@@ -15,8 +15,7 @@ pub struct InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     TransferOption {recipient : Addr},
-    FundCollateral{},
-    FundPremium {},
+    FundOption {},
     UnderwriteOption { underwrite_option_req: UnderwriteOptionRequest },
     ExecuteOption {},
     WithdrawExpiredOption {},

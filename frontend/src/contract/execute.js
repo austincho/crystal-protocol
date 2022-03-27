@@ -1,5 +1,5 @@
 import { LCDClient, MsgExecuteContract, Fee } from "@terra-money/terra.js";
-import { contractAdress } from "./address";
+import { contractAddress } from "./address";
 
 // ==== utils ====
 
@@ -20,8 +20,8 @@ const _exec =
       msgs: [
         new MsgExecuteContract(
           wallet.walletAddress,
-          contractAdress(wallet),
-          msg
+          contractAddress(wallet),
+          msg,
         ),
       ],
     });
@@ -45,7 +45,43 @@ const _exec =
 
 // ==== execute contract ====
 
-export const increment = _exec({ increment: {} });
+export const transferOption = async (wallet, recipient) => _exec({ transfer_option: { recipient : {recipient} }});
+export const fundPremium = _exec({ fund_premium: {} });
+export const underwriteOption = async(wallet, recipient) => _exec({ underwrite_option: {} });
+export const executeOption = _exec({ increment: {} });
+export const withdrawExpiredOption = _exec({ increment: {} });
+export const withdrawUnlockedOption = _exec({ increment: {} });
 
-export const reset = async (wallet, count) =>
-  _exec({ reset: { count } })(wallet);
+export const fund = async (wallet, fee, msg, coins) => {
+    const lcd = new LCDClient({
+        URL: wallet.network.lcd,
+        chainID: wallet.network.chainID,
+    });
+
+    const {result} = await wallet.post({
+        fee,
+        msgs: [
+            new MsgExecuteContract(
+                wallet.walletAddress,
+                contractAddress(wallet),
+                msg,
+                coins
+            ),
+        ],
+    });
+    while (true) {
+        try {
+            return await lcd.tx.txInfo(result.txhash);
+        } catch (e) {
+            if (Date.now() < untilInterval) {
+                await sleep(500);
+            } else if (Date.now() < until) {
+                await sleep(1000 * 10);
+            } else {
+                throw new Error(
+                    `Transaction queued. To verify the status, please check the transaction hash: ${result.txhash}`
+                );
+            }
+        }
+    }
+};

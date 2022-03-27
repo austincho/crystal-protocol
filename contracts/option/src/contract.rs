@@ -45,8 +45,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::FundCollateral {} => fund_collateral(deps, env, info),
-        ExecuteMsg::FundPremium {} => fund_premium(deps, env, info),
+        ExecuteMsg::FundOption {} => fund_option(deps, env, info),
         ExecuteMsg::TransferOption { recipient } => transfer_option(deps, env, info, recipient),
         ExecuteMsg::UnderwriteOption { underwrite_option_req } => underwrite_option(deps, env, info, underwrite_option_req),
         ExecuteMsg::ExecuteOption {} => execute_option(deps, env, info),
@@ -54,9 +53,8 @@ pub fn execute(
         ExecuteMsg::WithdrawUnlockedOption {} => withdraw_unlocked_option(deps, env, info),
     }
 }
-//TODO: I am assuming we can send more than 1 type of coin at one time.
-// If so, we can combine fund_collateral and fund_premium into one execute function.
-pub fn fund_collateral(
+
+pub fn fund_option(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo) -> Result<Response, ContractError> {
@@ -66,34 +64,21 @@ pub fn fund_collateral(
         return Err(ContractError::Unauthorized {});
     }
 
-    if state.collateral != info.funds {
-        return Err(ContractError::CollateralPriceMismatch {
-            offer: info.funds,
-            requires: state.collateral,
-        })
-    }
-
-    Ok(Response::new()
-        .add_attribute("method", "fund_collateral")
-        .add_attribute("message", "successfully funded premium")
-    )
-}
-
-pub fn fund_premium(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo) -> Result<Response, ContractError> {
-    let state = STATE.load(deps.storage)?;
-
-    if state.holder != info.sender {
+    if state.option_status != OptionStatus::CREATED {
         return Err(ContractError::Unauthorized {});
     }
 
-    if state.premium != info.funds {
+    if state.premium[0] != info.funds[0] {
         return Err(ContractError::PremiumPriceMismatch {
             offer: info.funds,
             requires: state.premium
         });
+    }
+    if state.collateral[0] != info.funds[1] {
+        return Err(ContractError::CollateralPriceMismatch {
+            offer: info.funds,
+            requires: state.collateral,
+        })
     }
 
     STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
@@ -249,13 +234,24 @@ pub fn withdraw_unlocked_option(
     info: MessageInfo
 ) -> Result<Response, ContractError> {
     let state = STATE.load(deps.storage)?;
+
     if state.option_status != OptionStatus::CREATED ||
         state.holder != info.sender.clone()
         {
         return Err(ContractError::Unauthorized {});
     }
 
-    Ok(Response::new())
+    Ok(Response::new()
+        .add_message(
+        BankMsg::Send {
+            to_address: state.holder.clone().into_string(),
+            amount: state.collateral
+        })
+        .add_message(BankMsg::Send{
+            to_address: state.holder.into_string(),
+            amount:state.premium,
+        })
+    )
 }
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
@@ -273,7 +269,7 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{Coin, coins, from_binary, Uint128};
+    use cosmwasm_std::{Coin, coin, coins, from_binary, Uint128};
 
     #[test]
     fn pass_proper_initialization() {
@@ -306,7 +302,7 @@ mod tests {
     fn pass_fund_premium_as_creator() {
         let mut deps = mock_dependencies(&[]);
 
-        let info = mock_info("holder", &coins(10, "uluna"));
+        let info = mock_info("holder",&[]);
         let msg = InstantiateMsg {
             asset: coins(10, "uusd"),
             collateral: coins(10, "uluna"),
@@ -316,8 +312,8 @@ mod tests {
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
 
         // fund the premium for the option contract with the correct amount and denomination
-        let info = mock_info("holder", &coins(1, "uusd"));
-        let msg = ExecuteMsg::FundPremium {};
+        let info = mock_info("holder", &[coin(1, "uusd"), coin(10, "uluna")]);
+        let msg = ExecuteMsg::FundOption {};
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         // Status should be FUNDED
@@ -330,7 +326,7 @@ mod tests {
     fn fail_fund_premium_as_creator() {
 
         let mut deps = mock_dependencies(&[]);
-        let info = mock_info("holder", &coins(10, "uluna"));
+        let info = mock_info("holder", &[]);
         let msg = InstantiateMsg {
             asset: coins(10, "uusd"),
             collateral: coins(10, "uluna"),
@@ -341,7 +337,7 @@ mod tests {
 
         // fund the premium for the option contract with the wrong amount and denomination
         let info = mock_info("holder", &coins(10, "token"));
-        let msg = ExecuteMsg::FundPremium {};
+        let msg = ExecuteMsg::FundOption {};
         let res = execute(deps.as_mut(), mock_env(), info, msg);
 
         match res {
@@ -354,7 +350,7 @@ mod tests {
     fn pass_underwrite_option() {
         let mut deps = mock_dependencies(&[]);
 
-        let info = mock_info("holder", &coins(10, "uluna"));
+        let info = mock_info("holder", &[]);
         let msg = InstantiateMsg {
             asset: coins(10, "uusd"),
             collateral: coins(10, "uluna"),
@@ -364,8 +360,8 @@ mod tests {
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
 
         // fund the premium for the option contract with the correct amount and denomination
-        let info = mock_info("holder", &coins(1, "uusd"));
-        let msg = ExecuteMsg::FundPremium {};
+        let info = mock_info("holder", &[coin(1, "uusd"), coin(10, "uluna")]);
+        let msg = ExecuteMsg::FundOption {};
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         // underwrite the option contract
@@ -386,90 +382,4 @@ mod tests {
         assert_eq!(OptionStatus::LOCKED, value.state.option_status);
         assert_eq!(info.sender, value.state.underwriter.unwrap());
     }
-
-    // #[test]
-    // fn pass_execute_option() {
-    //     let mut deps = mock_dependencies(&[]);
-    //     let env = mock_env();
-    //     let holder_info = mock_info("holder", &coins(10, "uluna"));
-    //     let msg = InstantiateMsg {
-    //         asset: coins(10, "uusd"),
-    //         collateral: coins(10, "uluna"),
-    //         premium: coins(1, "uusd"),
-    //         expires: 10000
-    //     };
-    //     instantiate(deps.as_mut(), env, holder_info, msg.clone()).unwrap();
-    //
-    //     // fund the premium for the option contract with the correct amount and denomination
-    //     let holder_info = mock_info("holder", &coins(1, "uusd"));
-    //     let msg = ExecuteMsg::FundPremium {};
-    //     execute(deps.as_mut(), env.clone(), holder_info, msg).unwrap();
-    //
-    //     // underwrite the option contract
-    //     let underwriter_info = mock_info("underwriter", &coins(10, "uusd"));
-    //     let underwrite_option_req = UnderwriteOptionRequest {
-    //         asset: coins(10, "uusd"),
-    //         collateral: coins(10, "uluna"),
-    //         premium: coins(1, "uusd"),
-    //         expires: 10000
-    //     };
-    //     let msg = ExecuteMsg::UnderwriteOption {
-    //         underwrite_option_req,
-    //     };
-    //     execute(deps.as_mut(), env.clone(), underwriter_info.clone(), msg);
-    //
-    //
-    //     // Check contract balance
-    //     let balance_amount = &deps.as_mut().querier.query_balance(env.clone().contract.address, "uusd".to_string()).unwrap();
-    //     assert_eq!(Coin {
-    //         denom: "uusd".to_string(),
-    //         amount: Uint128::new(11 as u128)
-    //     }, *balance_amount);
-    //     let balance_amount = &deps.as_mut().querier.query_balance(env.clone().contract.address, "uluna".to_string()).unwrap();
-    //     assert_eq!(Coin {
-    //         denom: "uluna".to_string(),
-    //         amount: Uint128::new(10 as u128)
-    //     }, *balance_amount);
-    //
-    //     // execute the option contract
-    //     let holder_info = mock_info("holder", &[]);
-    //     let msg = ExecuteMsg::ExecuteOption {};
-    //     execute(deps.as_mut(), env.clone(), holder_info.clone(), msg);
-    //
-    //     let res = query(deps.as_ref(), env.clone(), QueryMsg::GetOptionContract {}).unwrap();
-    //     let value: ConfigResponse = from_binary(&res).unwrap();
-    //     assert_eq!(OptionStatus::EXECUTED, value.state.option_status);
-    //
-    //     // Check contract balance
-    //     let balance_amount = &deps.as_mut().querier.query_balance(env.clone().contract.address, "uusd".to_string()).unwrap();
-    //     assert_eq!(Coin {
-    //         denom: "uusd".to_string(),
-    //         amount: Uint128::new(0 as u128)
-    //     }, *balance_amount);
-    //     let balance_amount = &deps.as_mut().querier.query_balance(env.clone().contract.address, "uluna".to_string()).unwrap();
-    //     assert_eq!(Coin {
-    //         denom: "uluna".to_string(),
-    //         amount: Uint128::new(0 as u128)
-    //     }, *balance_amount);
-    //
-    //     // Check holder balance
-    //     let balance_amount = &deps.as_mut().querier.query_balance(holder_info.sender, "uusd".to_string()).unwrap();
-    //     assert_eq!(Coin {
-    //         denom: "uusd".to_string(),
-    //         amount: Uint128::new(10 as u128)
-    //     }, *balance_amount);
-    //
-    //     // Check underwriter balance
-    //     let balance_amount = &deps.as_mut().querier.query_balance(underwriter_info.clone().sender, "uluna".to_string()).unwrap();
-    //     assert_eq!(Coin {
-    //         denom: "uluna".to_string(),
-    //         amount: Uint128::new(10 as u128)
-    //     }, *balance_amount);
-    //
-    //     let balance_amount = &deps.as_mut().querier.query_balance(underwriter_info.sender, "uusd".to_string()).unwrap();
-    //     assert_eq!(Coin {
-    //         denom: "uusd".to_string(),
-    //         amount: Uint128::new(1 as u128)
-    //     }, *balance_amount)
-    // }
 }
