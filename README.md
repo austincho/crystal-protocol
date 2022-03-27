@@ -11,7 +11,7 @@
 
 ---
 
-##Introduction
+## Introduction
 Given that the Terra Ecosystem currently has many excellent DEFI Projects in development, I wanted to develop something that 
 I have not seen in the ecosystem yet. We currently have Anchor that acts as a Bank facilitating borrowing/lending, we also 
 have Mirror, that offers the ability to purchase/sell tokenized securities, but I have yet to see a protocol that provides #lunatics
@@ -24,7 +24,7 @@ transaction involving an asset at a preset price prior and date. Options are gen
 speculation as well. 
 
 
-###Types of Options:
+### Types of Options:
 
 **Call Option Contract** 
 - The buyer of a call option has the ability to purchase the underlying security from the other party at specified price by the expiration date.
