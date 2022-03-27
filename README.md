@@ -23,7 +23,6 @@ An options Contract is an agreement between two parties to facilitate a potentia
 transaction involving an asset at a preset price prior and date. Options are generally used for hedging purposes but also can be used for
 speculation as well. 
 
-
 ### Types of Options:
 
 **Call Option Contract** 
@@ -43,6 +42,19 @@ You typically buy Put Options if you are bearish on an asset, as you believe tha
 security on the market and then sell the security to the seller of the Put Option contract.
 
 **Profit = Specified Price - Market Price**
+
+
+## Environment Set Up
+First have LocalTerra running.
+
+1. run `git clone git@github.com:austincho/crystal-protocol.git' using ssh
+2. run `cd contracts/option/`
+3. run `cargo build`
+4. run `cargo run-script optimize`
+5. cd `../../`
+6. run `terrain deploy option --signer validator  --no-rebuild`
+7. Take contract address found in `refs.terrain.json` and search for contract using the address  in the contract section of Terra Station
+8. Send ExecuteMsgs from Terra Station
 
 ## Implementation
 
