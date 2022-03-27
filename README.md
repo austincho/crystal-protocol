@@ -11,8 +11,6 @@
 
 ---
 
-<a name="intro"/>
-
 ##Introduction
 Given that the Terra Ecosystem currently has many excellent DEFI Projects in development, I wanted to develop something that 
 I have not seen in the ecosystem yet. We currently have Anchor that acts as a Bank facilitating borrowing/lending, we also 
@@ -46,9 +44,7 @@ security on the market and then sell the security to the seller of the Put Optio
 
 **Profit = Specified Price - Market Price**
 
-<a name="implementation"/>
-
-##Implementation
+## Implementation
 
 **NOTE: I may refer to the buyer of the contract as the "holder" and seller of the contract as the "underwriter."**
 
@@ -74,7 +70,7 @@ pub struct State {
 }
 ```
 
-###InstantiateMsg
+### InstantiateMsg
 
 In order to first create an Options Contract, the buyer(aka the holder) will send an InstantiateMsg...
 ```
@@ -102,7 +98,7 @@ contract is executed the collateral is transferred to the seller(aka the "underw
 seller(aka the "underwriter") of the option is putting into the contract and if the contract is executed the asset will be 
 transferred to the buyer(aka the "holder").
 
-###ExecuteMsg
+### ExecuteMsg
 
 ```
 pub enum ExecuteMsg {
