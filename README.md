@@ -125,7 +125,7 @@ pub enum OptionStatus {
 }
 ```
 
-####Fund Option Contract - as holder
+#### Fund Option Contract - as holder
 * After instantiating the smart contract the `holder` of the contract will have to fund the option by sending an `ExecuteMsg::FundOption` msg
 and send the specified `premium` and `collateral`. If funded with the correct amount the contract will move to `OptionStatus::FUNDED` stage.
 
